@@ -92,11 +92,18 @@ Every name in a pragma must be declared in `test/lib/gate/conditions.ts`
 (typos fail the suite at collection). Two tiers:
 
 - **static** — the run's shape: `dev`, `start`, `deploy`, `mode`, `turbopack`,
-  `rspack`, `webpack`, `bundler`, `react18`, `wasm`, `ci`, plus the
-  always-false `FIXME`/`TODO`. `prod` and `prefetching` are semantic aliases
-  for `!dev` — prefer the name that states _why_ the suite cannot run.
+  `rspack`, `webpack`, `bundler`, `react18`, `wasm`, `ci`; specialized CI
+  variants `adapter`, `cacheComponentsShard`, `standaloneOutput`,
+  `turbopackDev`, and `turbopackBuild`; plus the always-false `FIXME`/`TODO`.
+  `prod` and `prefetching` are semantic aliases for `!dev` — prefer the name
+  that states _why_ the suite cannot run.
 - **lazy** — a predicate over the fixture's _resolved_ `next.config`
   (`cacheComponents`, `ppr`, `useOffline`, `output`, …).
+
+`cacheComponentsShard` is the runner-level `__NEXT_CACHE_COMPONENTS` matrix
+variant. Use the lazy `cacheComponents` condition for the fixture's resolved
+config; reach for the shard condition only when the exclusion must be decided
+before fixture setup.
 
 Adding one is a two-line change; follow the guidance at the top of
 `conditions.ts`. The rule that matters: **lazy conditions read the resolved
