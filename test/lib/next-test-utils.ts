@@ -199,50 +199,14 @@ export function getFetchUrl(
   return getFullUrl(appPort, url)
 }
 
-/**
- * RequestInit as accepted by Node's global fetch (undici). The DOM-flavored
- * global RequestInit used in this repository lacks `duplex` and
- * async-iterable bodies, both of which undici accepts.
- */
-export type HarnessRequestInit = Omit<RequestInit, 'body'> & {
-  duplex?: 'half'
-  body?: RequestInit['body'] | AsyncIterable<Uint8Array>
-}
-
 export function fetchViaHTTP(
   appPort: string | number,
   pathname: string,
   query?: Record<string, any> | string | null | undefined,
-  opts?: HarnessRequestInit
+  opts?: RequestInit
 ): Promise<Response> {
   const url = query ? withQuery(pathname, query) : pathname
-  const fullUrl = getFullUrl(appPort, url)
-  // node-fetch v2 opened a fresh connection per request while undici pools
-  // keep-alive connections by default. Pooling breaks tests that restart or
-  // shut down servers and expect subsequent requests to use a new connection.
-  const headers = new Headers(opts?.headers)
-  if (!headers.has('connection')) {
-    headers.set('connection', 'close')
-  }
-  return fetch(fullUrl, { ...opts, headers } as RequestInit).then((res) => {
-    // node-fetch v2 resolved the Location header against the request URL on
-    // manual redirects; fetch returns it verbatim.
-    if (opts?.redirect !== 'manual') {
-      return res
-    }
-    const location = res.headers.get('location')
-    if (location === null || /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(location)) {
-      return res
-    }
-    const absoluteLocation = new URL(location, fullUrl).href
-    const resHeaders = new Headers(res.headers)
-    resHeaders.set('location', absoluteLocation)
-    return new Response(res.body, {
-      status: res.status,
-      statusText: res.statusText,
-      headers: resHeaders,
-    })
-  })
+  return fetch(getFullUrl(appPort, url), opts)
 }
 
 /**
@@ -366,7 +330,7 @@ export function renderViaHTTP(
   appPort: string | number,
   pathname: string,
   query?: Record<string, any> | string | undefined,
-  opts?: HarnessRequestInit
+  opts?: RequestInit
 ) {
   return fetchViaHTTP(appPort, pathname, query, opts).then((res) => res.text())
 }

@@ -68,7 +68,7 @@ function runTests({
       )
 
       expect(res.status).toBe(307)
-      const parsedUrl = new URL(res.headers.get('location'))
+      const parsedUrl = new URL(res.headers.get('location'), res.url)
 
       expect(parsedUrl.hostname).toBeOneOf(['localhost', '127.0.0.1'])
       expect(parsedUrl.pathname).toBe('/test/google.com')
@@ -83,7 +83,7 @@ function runTests({
       )
 
       expect(res2.status).toBe(307)
-      const parsedUrl2 = new URL(res2.headers.get('location'))
+      const parsedUrl2 = new URL(res2.headers.get('location'), res2.url)
 
       expect(parsedUrl2.hostname).toBeOneOf(['localhost', '127.0.0.1'])
       expect(parsedUrl2.pathname).toBe('/test/google.com')
@@ -100,7 +100,7 @@ function runTests({
       })
       expect(res.status).toBe(308)
 
-      const parsedUrl = new URL(res.headers.get('location'))
+      const parsedUrl = new URL(res.headers.get('location'), res.url)
       expect(parsedUrl.pathname).toBe('/google.com')
       expect(parsedUrl.hostname).toBeOneOf(['localhost', '127.0.0.1'])
       expect(Object.fromEntries(parsedUrl.searchParams.entries())).toEqual({})
@@ -128,7 +128,7 @@ function runTests({
         { redirect: 'manual' }
       )
       expect(res.status).toBe(308)
-      const parsedUrl = new URL(res.headers.get('location'))
+      const parsedUrl = new URL(res.headers.get('location'), res.url)
       expect(parsedUrl.pathname).toBe('/google.com')
       expect(parsedUrl.hostname).toBeOneOf(['localhost', '127.0.0.1'])
       expect(Object.fromEntries(parsedUrl.searchParams.entries())).toEqual({
@@ -155,7 +155,7 @@ function runTests({
         redirect: 'manual',
       })
       expect(res.status).toBe(308)
-      const parsedUrl = new URL(res.headers.get('location'))
+      const parsedUrl = new URL(res.headers.get('location'), res.url)
       expect(parsedUrl.pathname).toBe('/google.com')
       expect(parsedUrl.hostname).toBeOneOf(['localhost', '127.0.0.1'])
       expect(Object.fromEntries(parsedUrl.searchParams.entries())).toEqual({})
