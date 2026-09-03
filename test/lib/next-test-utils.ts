@@ -268,7 +268,6 @@ export function fetchViaRawHttp(
     typeof appPortOrUrl === 'string' && appPortOrUrl.startsWith('http')
       ? new URL(appPortOrUrl)
       : null
-  const origin = baseUrl ? baseUrl.origin : `http://localhost:${appPortOrUrl}`
   return new Promise((resolve, reject) => {
     const req = (baseUrl?.protocol === 'https:' ? https : http).request(
       {

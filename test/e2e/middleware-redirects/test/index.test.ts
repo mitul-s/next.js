@@ -3,7 +3,7 @@
 import { join } from 'path'
 import cheerio from 'cheerio'
 import { check, fetchViaHTTP, fetchViaRawHttp } from 'next-test-utils'
-import { FileRef, nextTestSetup } from 'e2e-utils'
+import { FileRef, isNextDeploy, nextTestSetup } from 'e2e-utils'
 
 describe('Middleware Redirect', () => {
   const { next } = nextTestSetup({
@@ -43,10 +43,18 @@ describe('Middleware Redirect', () => {
     it('should have relative path for same host redirect', async () => {
       // Raw request: fetchViaHTTP resolves the Location header against the
       // request URL like node-fetch v2 did, but this test asserts the
-      // relative value the server actually sends.
-      const res = await fetchViaRawHttp(next.appPort, '/to?pathname=/another')
+      // relative value the server actually sends. Raw requests only work
+      // against a locally running server, so deployed runs go through the
+      // harness and assert the resolved form instead.
+      const res = isNextDeploy
+        ? await next.fetch('/to?pathname=/another', { redirect: 'manual' })
+        : await fetchViaRawHttp(next.appPort, '/to?pathname=/another')
       expect(res.status).toBe(302)
-      expect(res.headers.get('Location')).toBe('/another')
+      if (isNextDeploy) {
+        expect(new URL(res.headers.get('Location')!).pathname).toBe('/another')
+      } else {
+        expect(res.headers.get('Location')).toBe('/another')
+      }
     })
 
     it(`should redirect to data urls with data requests and internal redirects`, async () => {

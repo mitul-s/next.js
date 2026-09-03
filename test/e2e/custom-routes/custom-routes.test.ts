@@ -1266,7 +1266,8 @@ describe('Custom routes', () => {
     })
 
     expect(res.status).toBe(307)
-    const parsed = new URL(res.headers.get('location'))
+    // Raw responses carry the Location header verbatim (relative).
+    const parsed = new URL(res.headers.get('location'), next.url)
 
     expect(parsed.pathname).toBe('/another')
     expect(Object.fromEntries(parsed.searchParams)).toEqual({
