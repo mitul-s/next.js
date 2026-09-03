@@ -243,7 +243,10 @@ function runTests({
     if (!isExport) {
       const res = await fetchViaRawHttp(port, '/\\google.com')
       expect(res.status).toBe(308)
-      const parsedUrl = new URL(res.headers.get('location'))
+      const parsedUrl = new URL(
+        res.headers.get('location'),
+        `http://localhost:${port}`
+      )
       expect(parsedUrl.pathname).toBe('/google.com')
       expect(parsedUrl.hostname).toBeOneOf(['localhost', '127.0.0.1'])
       expect(Object.fromEntries(parsedUrl.searchParams.entries())).toEqual({})
@@ -267,7 +270,10 @@ function runTests({
     if (!isExport) {
       const res = await fetchViaRawHttp(port, '/\\/google.com')
       expect(res.status).toBe(308)
-      const parsedUrl = new URL(res.headers.get('location'))
+      const parsedUrl = new URL(
+        res.headers.get('location'),
+        `http://localhost:${port}`
+      )
       expect(parsedUrl.pathname).toBe(isExport ? '//google.com' : '/google.com')
       expect(parsedUrl.hostname).toBeOneOf(['localhost', '127.0.0.1'])
       expect(Object.fromEntries(parsedUrl.searchParams.entries())).toEqual({})

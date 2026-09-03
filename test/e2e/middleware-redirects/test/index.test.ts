@@ -2,7 +2,7 @@
 
 import { join } from 'path'
 import cheerio from 'cheerio'
-import { check, fetchViaHTTP } from 'next-test-utils'
+import { check, fetchViaHTTP, fetchViaRawHttp } from 'next-test-utils'
 import { FileRef, nextTestSetup } from 'e2e-utils'
 
 describe('Middleware Redirect', () => {
@@ -41,9 +41,10 @@ describe('Middleware Redirect', () => {
     })
 
     it('should have relative path for same host redirect', async () => {
-      const res = await next.fetch('/to?pathname=/another', {
-        redirect: 'manual',
-      })
+      // Raw request: fetchViaHTTP resolves the Location header against the
+      // request URL like node-fetch v2 did, but this test asserts the
+      // relative value the server actually sends.
+      const res = await fetchViaRawHttp(next.appPort, '/to?pathname=/another')
       expect(res.status).toBe(302)
       expect(res.headers.get('Location')).toBe('/another')
     })

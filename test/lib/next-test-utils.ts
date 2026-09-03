@@ -249,7 +249,8 @@ export function fetchViaHTTP(
  * Sends a request without any URL parsing or normalization and with full
  * control over the Host header. Global fetch cannot be used for this: its
  * WHATWG URL parser normalizes backslashes, dot-segments, and repeated
- * slashes, and it derives the Host header from the URL authority.
+ * slashes, and it derives the Host header from the URL authority. The
+ * response is returned verbatim, including a raw relative Location header.
  */
 export function fetchViaRawHttp(
   appPortOrUrl: string | number,
@@ -268,7 +269,6 @@ export function fetchViaRawHttp(
       ? new URL(appPortOrUrl)
       : null
   const origin = baseUrl ? baseUrl.origin : `http://localhost:${appPortOrUrl}`
-  const requestUrl = origin + rawPath
   return new Promise((resolve, reject) => {
     const req = (baseUrl?.protocol === 'https:' ? https : http).request(
       {
@@ -291,15 +291,6 @@ export function fetchViaRawHttp(
                 headers.append(key, item)
               }
             }
-          }
-          // Reflect node-fetch v2, which resolved the Location header against
-          // the request URL instead of returning it verbatim.
-          const location = headers.get('location')
-          if (
-            location !== null &&
-            !/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(location)
-          ) {
-            headers.set('location', new URL(location, requestUrl).href)
           }
           const body = Buffer.concat(chunks)
           resolve(

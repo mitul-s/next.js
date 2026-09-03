@@ -58,7 +58,8 @@ describe('file-serving', () => {
     const checkRes = async (res) => {
       if (res.status === 308) {
         const redirectDest = res.headers.get('location')
-        const parsedUrl = new URL(redirectDest)
+        // Raw requests return the Location header verbatim (relative).
+        const parsedUrl = new URL(redirectDest, next.url)
         expect(parsedUrl.hostname).toBeOneOf(['localhost', '127.0.0.1'])
       } else {
         try {
