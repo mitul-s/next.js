@@ -7,6 +7,53 @@ import { stringifyQuery } from '../../server-route-utils'
 import { Duplex } from 'stream'
 import { createPromiseWithResolvers } from '../../../shared/lib/promise-with-resolvers'
 
+// RFC 9110 §7.6.1: hop-by-hop fields are meaningful only for a single
+// transport-level connection, so a proxy must not forward them. Forwarding
+// the client's Connection field verbatim additionally lets its token list
+// silently strip the named fields at the upstream.
+const HOP_BY_HOP_HEADERS = new Set([
+  'connection',
+  'keep-alive',
+  'proxy-authenticate',
+  'proxy-authorization',
+  'proxy-connection',
+  'te',
+  'trailer',
+  'transfer-encoding',
+  'upgrade',
+])
+
+export function stripHopByHopRequestHeaders(
+  req: IncomingMessage,
+  preserveUpgradeHandshake: boolean
+): void {
+  // Fields the Connection field nominates are hop-by-hop regardless of name.
+  const connection = req.headers.connection
+  if (typeof connection === 'string') {
+    for (const token of connection.split(',')) {
+      const name = token.trim().toLowerCase()
+      if (!name) continue
+      if (preserveUpgradeHandshake && name === 'upgrade') continue
+      delete req.headers[name]
+    }
+  }
+  for (const name of HOP_BY_HOP_HEADERS) {
+    if (
+      preserveUpgradeHandshake &&
+      (name === 'connection' || name === 'upgrade')
+    ) {
+      continue
+    }
+    delete req.headers[name]
+  }
+}
+
+function stripHopByHopResponseHeaders(proxyRes: IncomingMessage): void {
+  for (const name of HOP_BY_HOP_HEADERS) {
+    delete proxyRes.headers[name]
+  }
+}
+
 export async function proxyRequest(
   req: IncomingMessage,
   res: ServerResponse | Duplex,
@@ -26,6 +73,13 @@ export async function proxyRequest(
   const target = new URL(url.format(parsedUrl))
   const { ProxyServer } =
     require('next/dist/compiled/httpxy') as typeof import('next/dist/compiled/httpxy')
+
+  // Upgrade proxying keeps the handshake's own Connection/Upgrade pair (the
+  // upstream needs it); plain HTTP proxying strips the whole hop-by-hop set.
+  stripHopByHopRequestHeaders(
+    req,
+    Boolean(upgradeHead) || res instanceof Duplex
+  )
 
   const proxy = new ProxyServer({
     target,
@@ -62,6 +116,7 @@ export async function proxyRequest(
   })
 
   proxy.on('proxyRes', (proxyRes, innerReq, innerRes) => {
+    stripHopByHopResponseHeaders(proxyRes)
     const cleanup = (err: any) => {
       // cleanup event listeners to allow clean garbage collection
       proxyRes.removeListener('error', cleanup)
