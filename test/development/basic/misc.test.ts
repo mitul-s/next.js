@@ -62,8 +62,7 @@ describe.each([[''], ['/docs']])(
         )
 
         const { pathname, hostname } = new URL(
-          res.headers.get('location') || '',
-          next.url
+          res.headers.get('location') || ''
         )
         expect(res.status).toBe(308)
         expect(pathname).toBe(basePath + '/%2fexample.com')

@@ -203,10 +203,7 @@ export default (next: NextInstance) => {
         }
       )
 
-      const { pathname, hostname } = new URL(
-        res.headers.get('location') || '',
-        next.url
-      )
+      const { pathname, hostname } = new URL(res.headers.get('location') || '')
       expect(res.status).toBe(307)
       expect(pathname).toBe(encodeURI('/\\google.com/about'))
       expect(hostname).toBeOneOf(['localhost', '127.0.0.1'])
@@ -222,10 +219,7 @@ export default (next: NextInstance) => {
         }
       )
 
-      const { pathname, hostname } = new URL(
-        res.headers.get('location') || '',
-        next.url
-      )
+      const { pathname, hostname } = new URL(res.headers.get('location') || '')
       expect(res.status).toBe(307)
       expect(pathname).toBe('/%25google.com/about')
       expect(hostname).toBeOneOf(['localhost', '127.0.0.1'])
@@ -262,10 +256,7 @@ export default (next: NextInstance) => {
         }
       )
 
-      const { pathname, hostname } = new URL(
-        res.headers.get('location') || '',
-        next.url
-      )
+      const { pathname, hostname } = new URL(res.headers.get('location') || '')
       expect(res.status).toBe(307)
       expect(pathname).toBe('/%2fgoogle.com/about')
       expect(hostname).not.toBe('google.com')
@@ -299,10 +290,7 @@ export default (next: NextInstance) => {
         { redirect: 'manual' }
       )
 
-      const { pathname, hostname } = new URL(
-        res.headers.get('location') || '',
-        next.url
-      )
+      const { pathname, hostname } = new URL(res.headers.get('location') || '')
       expect(res.status).toBe(308)
       expect(pathname).toBe('/%2fexample.com')
       expect(hostname).not.toBe('example.com')

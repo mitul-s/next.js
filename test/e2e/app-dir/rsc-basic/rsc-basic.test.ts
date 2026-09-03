@@ -23,8 +23,6 @@ async function resolveStreamResponse(response: any, onData?: any) {
 
   const decoder = new TextDecoder()
   for await (const chunk of response.body) {
-    // fetch bodies yield Uint8Array, which unlike Buffer does not decode
-    // with toString().
     const text = decoder.decode(chunk, { stream: true })
     result += text
     onData(text, result)

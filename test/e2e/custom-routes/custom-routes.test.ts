@@ -422,20 +422,17 @@ describe('Custom routes', () => {
 
   it('should handle chained redirects successfully', async () => {
     const res1 = await next.fetch('/redir-chain1', { redirect: 'manual' })
-    const res1location = new URL(res1.headers.get('location'), next.url)
-      .pathname
+    const res1location = new URL(res1.headers.get('location')).pathname
     expect(res1.status).toBe(301)
     expect(res1location).toBe('/redir-chain2')
 
     const res2 = await next.fetch(res1location, { redirect: 'manual' })
-    const res2location = new URL(res2.headers.get('location'), next.url)
-      .pathname
+    const res2location = new URL(res2.headers.get('location')).pathname
     expect(res2.status).toBe(302)
     expect(res2location).toBe('/redir-chain3')
 
     const res3 = await next.fetch(res2location, { redirect: 'manual' })
-    const res3location = new URL(res3.headers.get('location'), next.url)
-      .pathname
+    const res3location = new URL(res3.headers.get('location')).pathname
     expect(res3.status).toBe(303)
     expect(res3location).toBe('/')
   })
@@ -460,7 +457,7 @@ describe('Custom routes', () => {
 
   it('should redirect successfully with permanent: false', async () => {
     const res = await next.fetch('/redirect1', { redirect: 'manual' })
-    const { pathname } = new URL(res.headers.get('location'), next.url)
+    const { pathname } = new URL(res.headers.get('location'))
     expect(res.status).toBe(307)
     expect(pathname).toBe('/')
   })
@@ -469,7 +466,7 @@ describe('Custom routes', () => {
     const res = await next.fetch('/hello/123/another', {
       redirect: 'manual',
     })
-    const { pathname } = new URL(res.headers.get('location'), next.url)
+    const { pathname } = new URL(res.headers.get('location'))
     expect(res.status).toBe(307)
     expect(pathname).toBe('/blog/123')
   })
@@ -478,10 +475,7 @@ describe('Custom routes', () => {
     const res = await next.fetch('/docs/router-status/500', {
       redirect: 'manual',
     })
-    const { pathname, hash, search } = new URL(
-      res.headers.get('location'),
-      res.url
-    )
+    const { pathname, hash, search } = new URL(res.headers.get('location'))
     expect(res.status).toBe(301)
     expect(pathname).toBe('/docs/v2/network/status-codes')
     expect(hash).toBe('#500')
@@ -490,7 +484,7 @@ describe('Custom routes', () => {
 
   it('should redirect successfully with provided statusCode', async () => {
     const res = await next.fetch('/redirect2', { redirect: 'manual' })
-    const { pathname, search } = new URL(res.headers.get('location'), next.url)
+    const { pathname, search } = new URL(res.headers.get('location'))
     expect(res.status).toBe(301)
     expect(pathname).toBe('/')
     expect(search).toEqual('')
@@ -500,7 +494,7 @@ describe('Custom routes', () => {
     const res = await next.fetch('/catchall-redirect/hello/world', {
       redirect: 'manual',
     })
-    const { pathname, search } = new URL(res.headers.get('location'), next.url)
+    const { pathname, search } = new URL(res.headers.get('location'))
     expect(res.status).toBe(307)
     expect(pathname).toBe('/somewhere')
     expect(search).toEqual('')
@@ -579,10 +573,7 @@ describe('Custom routes', () => {
     const res = await next.fetch('/query-redirect/hello/world?a=b', {
       redirect: 'manual',
     })
-    const { pathname, searchParams } = new URL(
-      res.headers.get('location'),
-      res.url
-    )
+    const { pathname, searchParams } = new URL(res.headers.get('location'))
     expect(res.status).toBe(307)
     expect(pathname).toBe('/with-params')
     expect(Object.fromEntries(searchParams)).toEqual({
@@ -597,10 +588,7 @@ describe('Custom routes', () => {
       '/query-redirect/hello%20world%3Fw%3D24%26focalpoint%3Dcenter/world?a=b',
       { redirect: 'manual' }
     )
-    const { pathname, searchParams } = new URL(
-      res.headers.get('location'),
-      res.url
-    )
+    const { pathname, searchParams } = new URL(res.headers.get('location'))
     expect(res.status).toBe(307)
     expect(pathname).toBe('/with-params')
     expect(Object.fromEntries(searchParams)).toEqual({
@@ -878,8 +866,7 @@ describe('Custom routes', () => {
     )
 
     const { pathname, hostname, searchParams } = new URL(
-      res.headers.get('location') || '',
-      res.url
+      res.headers.get('location') || ''
     )
     expect(res.status).toBe(307)
     expect(pathname).toBe(encodeURI('/\\google.com/about'))
@@ -1218,7 +1205,7 @@ describe('Custom routes', () => {
     })
 
     expect(res.status).toBe(307)
-    const parsed = new URL(res.headers.get('location'), next.url)
+    const parsed = new URL(res.headers.get('location'))
 
     expect(parsed.pathname).toBe('/another')
     expect(Object.fromEntries(parsed.searchParams)).toEqual({
@@ -1235,7 +1222,7 @@ describe('Custom routes', () => {
     })
 
     expect(res.status).toBe(307)
-    const parsed = new URL(res.headers.get('location'), next.url)
+    const parsed = new URL(res.headers.get('location'))
 
     expect(parsed.pathname).toBe('/another')
     expect(Object.fromEntries(parsed.searchParams)).toEqual({
@@ -1256,7 +1243,7 @@ describe('Custom routes', () => {
     })
 
     expect(res.status).toBe(307)
-    const parsed = new URL(res.headers.get('location'), next.url)
+    const parsed = new URL(res.headers.get('location'))
 
     expect(parsed.pathname).toBe('/another')
     expect(Object.fromEntries(parsed.searchParams)).toEqual({
@@ -1279,7 +1266,7 @@ describe('Custom routes', () => {
     })
 
     expect(res.status).toBe(307)
-    const parsed = new URL(res.headers.get('location'), next.url)
+    const parsed = new URL(res.headers.get('location'))
 
     expect(parsed.pathname).toBe('/another')
     expect(Object.fromEntries(parsed.searchParams)).toEqual({
@@ -1299,7 +1286,7 @@ describe('Custom routes', () => {
     })
 
     expect(res.status).toBe(307)
-    const parsed = new URL(res.headers.get('location'), next.url)
+    const parsed = new URL(res.headers.get('location'))
 
     expect(parsed.protocol).toBe('https:')
     expect(parsed.hostname).toBe('hello.example.com')
@@ -1314,7 +1301,7 @@ describe('Custom routes', () => {
       redirect: 'manual',
     })
     expect(res.status).toBe(307)
-    const parsed = new URL(res.headers.get('location'), next.url)
+    const parsed = new URL(res.headers.get('location'))
 
     expect(parsed.pathname).toBe('/somewhere')
     const query = {}
@@ -3641,7 +3628,7 @@ describe('Custom routes solo types', () => {
       expect(res.headers.get('x-custom-header')).toBeFalsy()
       expect(res.headers.get('x-another-header')).toBeFalsy()
 
-      const { pathname } = new URL(res2.headers.get('location'), next.url)
+      const { pathname } = new URL(res2.headers.get('location'))
       expect(res2.status).toBe(301)
       expect(pathname).toBe('/docs/v2/advanced/now-for-github')
 

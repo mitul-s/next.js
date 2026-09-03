@@ -304,7 +304,7 @@ describe('i18n Support', () => {
           } else {
             expect(res.status).toBe(307)
 
-            const parsed = new URL(res.headers.get('location'), next.url)
+            const parsed = new URL(res.headers.get('location'))
             expect(parsed.pathname).toBe(`/${locale}/`)
             expect(Object.fromEntries(parsed.searchParams.entries())).toEqual(
               {}
@@ -478,7 +478,7 @@ describe('i18n Support', () => {
           } else {
             expect(res.status).toBe(307)
 
-            const parsed = new URL(res.headers.get('location'), next.url)
+            const parsed = new URL(res.headers.get('location'))
             expect(parsed.pathname).toBe(`/${locale}`)
             expect(Object.fromEntries(parsed.searchParams.entries())).toEqual(
               {}

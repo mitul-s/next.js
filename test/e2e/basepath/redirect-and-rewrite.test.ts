@@ -109,7 +109,7 @@ describe('basePath', () => {
         redirect: 'manual',
       }
     )
-    const { pathname } = new URL(res.headers.get('location') || '', next.url)
+    const { pathname } = new URL(res.headers.get('location') || '')
     expect(pathname).toBe(`${basePath}/somewhere-else`)
     expect(res.status).toBe(307)
     const text = await res.text()
@@ -143,7 +143,7 @@ describe('basePath', () => {
         redirect: 'manual',
       }
     )
-    const { pathname } = new URL(res.headers.get('location') || '', next.url)
+    const { pathname } = new URL(res.headers.get('location') || '')
     expect(pathname).toBe('/another-destination')
     expect(res.status).toBe(307)
     const text = await res.text()

@@ -8,6 +8,7 @@ import {
 } from 'fs'
 import { inspect, promisify } from 'util'
 import http from 'http'
+import https from 'https'
 import path from 'path'
 
 import type cheerio from 'cheerio'
@@ -200,11 +201,12 @@ export function getFetchUrl(
 
 /**
  * RequestInit as accepted by Node's global fetch (undici). The DOM-flavored
- * global RequestInit used in this repository lacks `dispatcher` and `duplex`.
+ * global RequestInit used in this repository lacks `duplex` and
+ * async-iterable bodies, both of which undici accepts.
  */
-export type HarnessRequestInit = RequestInit & {
-  dispatcher?: import('undici').Dispatcher
+export type HarnessRequestInit = Omit<RequestInit, 'body'> & {
   duplex?: 'half'
+  body?: RequestInit['body'] | AsyncIterable<Uint8Array>
 }
 
 export function fetchViaHTTP(
@@ -214,6 +216,7 @@ export function fetchViaHTTP(
   opts?: HarnessRequestInit
 ): Promise<Response> {
   const url = query ? withQuery(pathname, query) : pathname
+  const fullUrl = getFullUrl(appPort, url)
   // node-fetch v2 opened a fresh connection per request while undici pools
   // keep-alive connections by default. Pooling breaks tests that restart or
   // shut down servers and expect subsequent requests to use a new connection.
@@ -221,7 +224,25 @@ export function fetchViaHTTP(
   if (!headers.has('connection')) {
     headers.set('connection', 'close')
   }
-  return fetch(getFullUrl(appPort, url), { ...opts, headers })
+  return fetch(fullUrl, { ...opts, headers } as RequestInit).then((res) => {
+    // node-fetch v2 resolved the Location header against the request URL on
+    // manual redirects; fetch returns it verbatim.
+    if (opts?.redirect !== 'manual') {
+      return res
+    }
+    const location = res.headers.get('location')
+    if (location === null || /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(location)) {
+      return res
+    }
+    const absoluteLocation = new URL(location, fullUrl).href
+    const resHeaders = new Headers(res.headers)
+    resHeaders.set('location', absoluteLocation)
+    return new Response(res.body, {
+      status: res.status,
+      statusText: res.statusText,
+      headers: resHeaders,
+    })
+  })
 }
 
 /**
@@ -231,23 +252,32 @@ export function fetchViaHTTP(
  * slashes, and it derives the Host header from the URL authority.
  */
 export function fetchViaRawHttp(
-  appPort: string | number,
+  appPortOrUrl: string | number,
   rawPath: string,
   opts?: {
     method?: string
     headers?: Record<string, string>
     /** Accepted for drop-in compatibility; raw requests never follow redirects. */
     redirect?: 'manual'
+    /** Passed to the TLS connection for https URLs (e.g. self-signed servers). */
+    rejectUnauthorized?: boolean
   }
 ): Promise<Response> {
+  const baseUrl =
+    typeof appPortOrUrl === 'string' && appPortOrUrl.startsWith('http')
+      ? new URL(appPortOrUrl)
+      : null
+  const origin = baseUrl ? baseUrl.origin : `http://localhost:${appPortOrUrl}`
+  const requestUrl = origin + rawPath
   return new Promise((resolve, reject) => {
-    const req = http.request(
+    const req = (baseUrl?.protocol === 'https:' ? https : http).request(
       {
-        hostname: '127.0.0.1',
-        port: Number(appPort),
+        hostname: baseUrl ? baseUrl.hostname : '127.0.0.1',
+        port: baseUrl ? baseUrl.port : appPortOrUrl,
         path: rawPath,
         method: opts?.method ?? 'GET',
         headers: opts?.headers,
+        rejectUnauthorized: opts?.rejectUnauthorized,
       },
       (res) => {
         const chunks: Buffer[] = []
@@ -261,6 +291,15 @@ export function fetchViaRawHttp(
                 headers.append(key, item)
               }
             }
+          }
+          // Reflect node-fetch v2, which resolved the Location header against
+          // the request URL instead of returning it verbatim.
+          const location = headers.get('location')
+          if (
+            location !== null &&
+            !/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(location)
+          ) {
+            headers.set('location', new URL(location, requestUrl).href)
           }
           const body = Buffer.concat(chunks)
           resolve(
@@ -276,6 +315,14 @@ export function fetchViaRawHttp(
     req.on('error', reject)
     req.end()
   })
+}
+
+export function renderViaRawHTTP(
+  appPortOrUrl: string | number,
+  rawPath: string,
+  opts?: Parameters<typeof fetchViaRawHttp>[2]
+) {
+  return fetchViaRawHttp(appPortOrUrl, rawPath, opts).then((res) => res.text())
 }
 
 export function expectVaryHeaderToContain(

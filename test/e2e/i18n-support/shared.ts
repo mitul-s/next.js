@@ -2123,10 +2123,7 @@ export function runTests(ctx) {
       })
       expect(res.status).toBe(308)
 
-      const parsed = new URL(
-        res.headers.get('location'),
-        `http://localhost:${ctx.appPort}`
-      )
+      const parsed = new URL(res.headers.get('location'))
       expect(parsed.pathname).toBe(path)
 
       if (hostname === 'localhost') {
@@ -2162,10 +2159,7 @@ export function runTests(ctx) {
       expect(res.status).toBe(shouldRedirect ? 307 : 200)
 
       if (shouldRedirect) {
-        const parsed = new URL(
-          res.headers.get('location'),
-          `http://localhost:${ctx.appPort}`
-        )
+        const parsed = new URL(res.headers.get('location'))
         expect(parsed.pathname).toBe(
           `${ctx.basePath}${locale || ''}${pathname || '/somewhere-else'}`
         )
@@ -3019,10 +3013,7 @@ export function runTests(ctx) {
           }
 
           if (shouldRedirect) {
-            const parsedUrl = new URL(
-              res.headers.get('location'),
-              `http://localhost:${ctx.appPort}`
-            )
+            const parsedUrl = new URL(res.headers.get('location'))
 
             const expectedPathname = `/${
               expectedDomainItem.defaultLocale === locale ? '' : locale
@@ -3468,10 +3459,7 @@ export function runTests(ctx) {
     )
     expect(res.status).toBe(307)
 
-    const parsedUrl = new URL(
-      res.headers.get('location'),
-      `http://localhost:${ctx.appPort}`
-    )
+    const parsedUrl = new URL(res.headers.get('location'))
     expect(parsedUrl.pathname).toBe(`${ctx.basePath}/nl-NL`)
     expect(Object.fromEntries(parsedUrl.searchParams.entries())).toEqual({})
 
@@ -3488,10 +3476,7 @@ export function runTests(ctx) {
     )
     expect(res2.status).toBe(307)
 
-    const parsedUrl2 = new URL(
-      res2.headers.get('location'),
-      `http://localhost:${ctx.appPort}`
-    )
+    const parsedUrl2 = new URL(res2.headers.get('location'))
     expect(parsedUrl2.pathname).toBe(`${ctx.basePath}/en`)
     expect(Object.fromEntries(parsedUrl2.searchParams.entries())).toEqual({
       hello: 'world',

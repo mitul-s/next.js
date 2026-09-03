@@ -1,8 +1,7 @@
 /* eslint-disable jest/no-standalone-expect */
 import { nextTestSetup, isNextDev } from 'e2e-utils'
-import { retry } from 'next-test-utils'
+import { fetchViaRawHttp, renderViaRawHTTP, retry } from 'next-test-utils'
 import cheerio from 'cheerio'
-import { Agent } from 'undici'
 
 const sharedDeps = { 'get-port': '5.1.1' }
 const sharedNodeEnv = isNextDev ? 'development' : 'production'
@@ -14,13 +13,11 @@ describe.each([
   { title: 'HTTPS', useHttps: 'true' },
 ])('Custom Server $title', ({ title, useHttps }) => {
   // The HTTPS server presents a self-signed certificate that the test process
-  // does not trust. Pass a custom dispatcher that skips cert verification on
-  // every HTTPS request. Setting `process.env.NODE_TLS_REJECT_UNAUTHORIZED =
-  // '0'` does not take effect from inside the Jest VM context.
-  const dispatcher =
-    useHttps === 'true'
-      ? new Agent({ connect: { rejectUnauthorized: false } })
-      : undefined
+  // does not trust. Setting `process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'`
+  // does not take effect from inside the Jest VM context, so skip cert
+  // verification per request instead.
+  const tlsOpts =
+    useHttps === 'true' ? { rejectUnauthorized: false } : undefined
 
   describe('with dynamic assetPrefix', () => {
     const { next, skipped } = nextTestSetup({
@@ -35,32 +32,38 @@ describe.each([
     if (skipped) return
 
     it('should render the custom 404 page for an unmatched request', async () => {
-      const response = await next.fetch('/does-not-exist', { dispatcher })
+      const response = await fetchViaRawHttp(
+        next.url,
+        '/does-not-exist',
+        tlsOpts
+      )
 
       expect(response.status).toBe(404)
       expect(await response.text()).toContain('made it to 404')
     })
 
     it('should serve internal file from render', async () => {
-      const html = await next.render('/static/hello.txt', undefined, {
-        dispatcher,
-      })
+      const html = await renderViaRawHTTP(
+        next.url,
+        '/static/hello.txt',
+        tlsOpts
+      )
       expect(html).toMatch(/hello world/)
     })
 
     it('should handle render with undefined query', async () => {
-      const html = await next.render('/no-query', undefined, { dispatcher })
+      const html = await renderViaRawHTTP(next.url, '/no-query', tlsOpts)
       expect(html).toMatch(/"query":/)
     })
 
     it('should set the assetPrefix dynamically', async () => {
-      const normalUsage = await next.render('/asset', undefined, { dispatcher })
+      const normalUsage = await renderViaRawHTTP(next.url, '/asset', tlsOpts)
       expect(normalUsage).not.toMatch(/127\.0\.0\.1/)
 
-      const dynamicUsage = await next.render(
+      const dynamicUsage = await renderViaRawHTTP(
+        next.url,
         '/asset?setAssetPrefix=1',
-        undefined,
-        { dispatcher }
+        tlsOpts
       )
       expect(dynamicUsage).toMatch(/127\.0\.0\.1/)
       await retry(async () => {
@@ -69,10 +72,10 @@ describe.each([
     })
 
     it('should handle null assetPrefix accordingly', async () => {
-      const normalUsage = await next.render(
+      const normalUsage = await renderViaRawHTTP(
+        next.url,
         '/asset?setEmptyAssetPrefix=1',
-        undefined,
-        { dispatcher }
+        tlsOpts
       )
       expect(normalUsage).toMatch(/"\/_next/)
     })
@@ -80,13 +83,11 @@ describe.each([
     it('should set the assetPrefix to a given request', async () => {
       for (let lc = 0; lc < 10; lc++) {
         // Make requests sequential to avoid race condition with setAssetPrefix
-        const normalUsage = await next.render('/asset', undefined, {
-          dispatcher,
-        })
-        const dynamicUsage = await next.render(
+        const normalUsage = await renderViaRawHTTP(next.url, '/asset', tlsOpts)
+        const dynamicUsage = await renderViaRawHTTP(
+          next.url,
           '/asset?setAssetPrefix=1',
-          undefined,
-          { dispatcher }
+          tlsOpts
         )
 
         expect(normalUsage).not.toMatch(/127\.0\.0\.1/)
@@ -101,7 +102,7 @@ describe.each([
     })
 
     it('should render nested index', async () => {
-      const html = await next.render('/dashboard', undefined, { dispatcher })
+      const html = await renderViaRawHTTP(next.url, '/dashboard', tlsOpts)
       expect(html).toMatch(/made it to dashboard/)
       await retry(async () => {
         expect(next.cliOutput).toContain(deprecatedWarning('render'))
@@ -109,8 +110,8 @@ describe.each([
     })
 
     it('should warn once for repeated render calls', async () => {
-      await next.render('/dashboard', undefined, { dispatcher })
-      await next.render('/dashboard', undefined, { dispatcher })
+      await renderViaRawHTTP(next.url, '/dashboard', tlsOpts)
+      await renderViaRawHTTP(next.url, '/dashboard', tlsOpts)
 
       await retry(async () => {
         expect(
@@ -120,16 +121,16 @@ describe.each([
     })
 
     it('should handle custom urls with requests handler', async () => {
-      const html = await next.render(
+      const html = await renderViaRawHTTP(
+        next.url,
         '/custom-url-with-request-handler',
-        undefined,
-        { dispatcher }
+        tlsOpts
       )
       expect(html).toMatch(/made it to dashboard/)
     })
 
     it.skip('should contain customServer in NEXT_DATA', async () => {
-      const html = await next.render('/', undefined, { dispatcher })
+      const html = await renderViaRawHTTP(next.url, '/', tlsOpts)
       const $ = cheerio.load(html)
       expect(JSON.parse($('#__NEXT_DATA__').text()).customServer).toBe(true)
     })
@@ -137,14 +138,17 @@ describe.each([
     it.each(['/', '/no-query'])(
       'should handle compression for route %s',
       async (route) => {
-        const response = await next.fetch(route, { dispatcher })
+        const response = await fetchViaRawHttp(next.url, route, {
+          ...tlsOpts,
+          headers: { 'accept-encoding': 'gzip' },
+        })
         expect(response.headers.get('Content-Encoding')).toBe('gzip')
       }
     )
 
     it('should read the expected url protocol in middleware', async () => {
       const path = '/middleware-augmented'
-      const response = await next.fetch(path, { dispatcher })
+      const response = await fetchViaRawHttp(next.url, path, tlsOpts)
       const port = new URL(next.url).port
       expect(response.headers.get('x-original-url')).toBe(
         `${useHttps === 'true' ? 'https' : 'http'}://localhost:${port}${path}`
@@ -168,7 +172,7 @@ describe.each([
     if (skipped) return
 
     it('response includes etag header', async () => {
-      const response = await next.fetch('/', { dispatcher })
+      const response = await fetchViaRawHttp(next.url, '/', tlsOpts)
       expect(response.headers.get('etag')).toBeTruthy()
     })
   })
@@ -190,7 +194,7 @@ describe.each([
     if (skipped) return
 
     it('response does not include etag header', async () => {
-      const response = await next.fetch('/', { dispatcher })
+      const response = await fetchViaRawHttp(next.url, '/', tlsOpts)
       expect(response.headers.get('etag')).toBeNull()
     })
   })
@@ -254,7 +258,7 @@ describe.each([
     if (skipped) return
     ;(isNextDev ? it : it.skip)('should warn in development mode', async () => {
       const cliOutputBefore = next.cliOutput.length
-      const html = await next.render('/no-slash', undefined, { dispatcher })
+      const html = await renderViaRawHTTP(next.url, '/no-slash', tlsOpts)
       expect(html).toContain('made it to dashboard')
       await retry(async () => {
         expect(next.cliOutput.slice(cliOutputBefore)).toContain(
@@ -264,7 +268,7 @@ describe.each([
     })
     ;(isNextDev ? it.skip : it)('should warn in production mode', async () => {
       const cliOutputBefore = next.cliOutput.length
-      const html = await next.render('/no-slash', undefined, { dispatcher })
+      const html = await renderViaRawHTTP(next.url, '/no-slash', tlsOpts)
       expect(html).toContain('made it to dashboard')
       await retry(async () => {
         expect(next.cliOutput.slice(cliOutputBefore)).toContain(
@@ -291,9 +295,11 @@ describe.each([
     if (skipped) return
 
     it('should serve internal file from render', async () => {
-      const html = await next.render('/static/hello.txt', undefined, {
-        dispatcher,
-      })
+      const html = await renderViaRawHTTP(
+        next.url,
+        '/static/hello.txt',
+        tlsOpts
+      )
       expect(html).toMatch(/hello world/)
     })
   })
@@ -312,7 +318,7 @@ describe.each([
 
     it('stderr should include error message and stack trace', async () => {
       const cliOutputBefore = next.cliOutput.length
-      await next.fetch('/unhandled-rejection', { dispatcher })
+      await fetchViaRawHttp(next.url, '/unhandled-rejection', tlsOpts)
       await retry(async () => {
         const newOutput = next.cliOutput.slice(cliOutputBefore)
         expect(newOutput).toContain('unhandledRejection')
@@ -338,10 +344,10 @@ describe.each([
     if (skipped) return
 
     it('NextCustomServer.renderToHTML', async () => {
-      const rawHTML = await next.render(
+      const rawHTML = await renderViaRawHTTP(
+        next.url,
         '/legacy-methods/render-to-html?q=2',
-        undefined,
-        { dispatcher }
+        tlsOpts
       )
       const $ = cheerio.load(rawHTML)
       const text = $('p').text()
@@ -353,9 +359,11 @@ describe.each([
     })
 
     it('NextCustomServer.render404', async () => {
-      const html = await next.render('/legacy-methods/render404', undefined, {
-        dispatcher,
-      })
+      const html = await renderViaRawHTTP(
+        next.url,
+        '/legacy-methods/render404',
+        tlsOpts
+      )
       expect(html).toContain('made it to 404')
       await retry(async () => {
         expect(next.cliOutput).toContain(deprecatedWarning('render404'))
@@ -363,10 +371,10 @@ describe.each([
     })
 
     it('NextCustomServer.renderError', async () => {
-      const html = await next.render(
+      const html = await renderViaRawHTTP(
+        next.url,
         '/legacy-methods/render-error',
-        undefined,
-        { dispatcher }
+        tlsOpts
       )
       if (isNextDev) {
         expect(html).toContain('Error: kaboom')
@@ -379,10 +387,10 @@ describe.each([
     })
 
     it('NextCustomServer.renderErrorToHTML', async () => {
-      const html = await next.render(
+      const html = await renderViaRawHTTP(
+        next.url,
         '/legacy-methods/render-error-to-html',
-        undefined,
-        { dispatcher }
+        tlsOpts
       )
       if (isNextDev) {
         expect(html).toContain('Error: kaboom')
@@ -402,7 +410,7 @@ describe.each([
       ],
       ['revalidate', '/legacy-methods/revalidate'],
     ])('warns for NextCustomServer.%s', async (method, path) => {
-      const response = await next.fetch(path, { dispatcher })
+      const response = await fetchViaRawHttp(next.url, path, tlsOpts)
       expect(response.status).toBe(200)
       await retry(async () => {
         expect(next.cliOutput).toContain(deprecatedWarning(method))

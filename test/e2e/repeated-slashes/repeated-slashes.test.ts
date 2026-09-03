@@ -68,10 +68,7 @@ function runTests({
       )
 
       expect(res.status).toBe(307)
-      const parsedUrl = new URL(
-        res.headers.get('location'),
-        `http://localhost:${resolvePort()}`
-      )
+      const parsedUrl = new URL(res.headers.get('location'))
 
       expect(parsedUrl.hostname).toBeOneOf(['localhost', '127.0.0.1'])
       expect(parsedUrl.pathname).toBe('/test/google.com')
@@ -86,10 +83,7 @@ function runTests({
       )
 
       expect(res2.status).toBe(307)
-      const parsedUrl2 = new URL(
-        res2.headers.get('location'),
-        `http://localhost:${resolvePort()}`
-      )
+      const parsedUrl2 = new URL(res2.headers.get('location'))
 
       expect(parsedUrl2.hostname).toBeOneOf(['localhost', '127.0.0.1'])
       expect(parsedUrl2.pathname).toBe('/test/google.com')
@@ -106,10 +100,7 @@ function runTests({
       })
       expect(res.status).toBe(308)
 
-      const parsedUrl = new URL(
-        res.headers.get('location'),
-        `http://localhost:${resolvePort()}`
-      )
+      const parsedUrl = new URL(res.headers.get('location'))
       expect(parsedUrl.pathname).toBe('/google.com')
       expect(parsedUrl.hostname).toBeOneOf(['localhost', '127.0.0.1'])
       expect(Object.fromEntries(parsedUrl.searchParams.entries())).toEqual({})
@@ -137,10 +128,7 @@ function runTests({
         { redirect: 'manual' }
       )
       expect(res.status).toBe(308)
-      const parsedUrl = new URL(
-        res.headers.get('location'),
-        `http://localhost:${resolvePort()}`
-      )
+      const parsedUrl = new URL(res.headers.get('location'))
       expect(parsedUrl.pathname).toBe('/google.com')
       expect(parsedUrl.hostname).toBeOneOf(['localhost', '127.0.0.1'])
       expect(Object.fromEntries(parsedUrl.searchParams.entries())).toEqual({
@@ -167,10 +155,7 @@ function runTests({
         redirect: 'manual',
       })
       expect(res.status).toBe(308)
-      const parsedUrl = new URL(
-        res.headers.get('location'),
-        `http://localhost:${resolvePort()}`
-      )
+      const parsedUrl = new URL(res.headers.get('location'))
       expect(parsedUrl.pathname).toBe('/google.com')
       expect(parsedUrl.hostname).toBeOneOf(['localhost', '127.0.0.1'])
       expect(Object.fromEntries(parsedUrl.searchParams.entries())).toEqual({})
@@ -258,10 +243,7 @@ function runTests({
     if (!isExport) {
       const res = await fetchViaRawHttp(port, '/\\google.com')
       expect(res.status).toBe(308)
-      const parsedUrl = new URL(
-        res.headers.get('location'),
-        `http://localhost:${resolvePort()}`
-      )
+      const parsedUrl = new URL(res.headers.get('location'))
       expect(parsedUrl.pathname).toBe('/google.com')
       expect(parsedUrl.hostname).toBeOneOf(['localhost', '127.0.0.1'])
       expect(Object.fromEntries(parsedUrl.searchParams.entries())).toEqual({})
@@ -285,10 +267,7 @@ function runTests({
     if (!isExport) {
       const res = await fetchViaRawHttp(port, '/\\/google.com')
       expect(res.status).toBe(308)
-      const parsedUrl = new URL(
-        res.headers.get('location'),
-        `http://localhost:${resolvePort()}`
-      )
+      const parsedUrl = new URL(res.headers.get('location'))
       expect(parsedUrl.pathname).toBe(isExport ? '//google.com' : '/google.com')
       expect(parsedUrl.hostname).toBeOneOf(['localhost', '127.0.0.1'])
       expect(Object.fromEntries(parsedUrl.searchParams.entries())).toEqual({})
